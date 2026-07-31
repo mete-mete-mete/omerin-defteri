@@ -1,0 +1,21 @@
+---
+layout: base.njk
+title: "Ömer'in Defteri"
+---
+<div class="post-list">
+  {% for post in collections.yazilar %}
+  <article class="post-preview">
+    <p class="post-date">{{ post.data.tarih }}</p>
+    <h2 class="post-title"><a href="{{ post.url }}">{{ post.data.title }}</a></h2>
+    {% if post.data.ozet %}
+    <p class="post-excerpt">{{ post.data.ozet }}</p>
+    {% endif %}
+    <a class="read-more" href="{{ post.url }}">Devamını oku &rarr;</a>
+  </article>
+  {% else %}
+  <div class="empty-state">
+    <p>Henüz bir yazı eklenmedi.</p>
+    <p class="empty-hint">Yeni bir yazı eklemek için <a href="/admin/">yazı ekleme sayfasına</a> gidin.</p>
+  </div>
+  {% endfor %}
+</div>
