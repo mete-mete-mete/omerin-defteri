@@ -9,6 +9,7 @@ module.exports = function (eleventyConfig) {
   });
 
   return {
+    // Yazılarda {{ veya {% geçerse derleme bozulmasın
     markdownTemplateEngine: false,
     dir: {
       input: "src",
