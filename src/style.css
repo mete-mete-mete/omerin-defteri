@@ -175,8 +175,13 @@ body {
   font-size: 16px;
 }
 
+.like-button.liked .like-heart {
+  font-size: 0;
+}
+
 .like-button.liked .like-heart::before {
   content: "\2665";
+  font-size: 16px;
 }
 
 .comments {

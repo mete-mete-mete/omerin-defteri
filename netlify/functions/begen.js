@@ -2,9 +2,11 @@ import { getStore } from "@netlify/blobs";
 
 export default async (req) => {
   const url = new URL(req.url);
-  const postId = url.searchParams.get("post");
+  // Sayfa adresi "/posts/ornek/" biçiminde gelir; Netlify Blobs anahtarı "/" ile
+  // başlayamaz, bu yüzden baştaki ve sondaki eğik çizgiler atılır.
+  const postId = (url.searchParams.get("post") || "").replace(/^\/+|\/+$/g, "");
 
-  if (!postId) {
+  if (!postId || postId.length > 200 || !/^[a-z0-9][a-z0-9\-\/]*$/.test(postId)) {
     return new Response(JSON.stringify({ error: "post parametresi gerekli" }), {
       status: 400,
       headers: { "content-type": "application/json" }
