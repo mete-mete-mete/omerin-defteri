@@ -1,0 +1,32 @@
+---
+layout: base.njk
+---
+<article class="post-full">
+  <p class="post-date">{{ tarih }}</p>
+  <h1 class="post-title-full">{{ title }}</h1>
+  <div class="post-body">
+    {{ content | safe }}
+  </div>
+
+  <div class="like-row">
+    <button class="like-button" id="like-button" type="button" aria-label="Bu yazıyı beğen">
+      <span class="like-heart">&#9825;</span>
+      <span id="like-count">0</span> beğeni
+    </button>
+  </div>
+
+  <a class="back-link" href="/">&larr; Tüm yazılar</a>
+
+  <div class="comments">
+    <div id="cusdis_thread"
+      data-host="https://cusdis.com"
+      data-app-id="{{ site.cusdisAppId }}"
+      data-page-id="{{ page.url }}"
+      data-page-url="{{ page.url }}"
+      data-page-title="{{ title }}"
+    ></div>
+    <script async defer src="https://cusdis.com/js/cusdis.es.js"></script>
+  </div>
+</article>
+
+<script src="/likes.js" data-post-id="{{ page.url }}"></script>
