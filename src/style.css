@@ -109,6 +109,27 @@ body {
   margin: 0 0 1.25rem;
 }
 
+.post-body .yazi-foto {
+  margin: 1.75rem 0;
+}
+
+.post-body .yazi-foto img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 6px;
+  background: var(--line);
+}
+
+.post-body .yazi-foto figcaption {
+  margin-top: 8px;
+  font-size: 14px;
+  font-style: italic;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
 .back-link {
   display: inline-block;
   margin-top: 2rem;
@@ -209,6 +230,107 @@ body {
   width: 1px;
   height: 1px;
   opacity: 0;
+}
+
+.admin-form .alan-etiketi {
+  margin: 1.25rem 0 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.bloklar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.metin-blogu .metin-alani {
+  display: block;
+  min-height: 5.5rem;
+  overflow: hidden;
+}
+
+.blok-araci {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-top: 8px;
+}
+
+.foto-ekle-dugmesi {
+  padding: 9px 16px;
+  font-family: "Inter", sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--accent);
+  background: #fff;
+  border: 1px dashed var(--accent);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.foto-ekle-dugmesi:hover {
+  background: #F6E9E2;
+}
+
+.foto-ekle-ipucu {
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+.foto-karti {
+  padding: 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.foto-gorsel img {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  background: var(--paper);
+  border-radius: 6px;
+}
+
+.foto-gorsel.gorsel-yok {
+  padding: 28px 12px;
+  font-size: 14px;
+  text-align: center;
+  color: var(--ink-faint);
+  background: var(--paper);
+  border-radius: 6px;
+}
+
+.foto-durumu {
+  min-height: 1.4em;
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+
+.foto-durumu.bekle { color: var(--ink-soft); }
+.foto-durumu.basarili { color: #2F6B3A; }
+.foto-durumu.hata { color: #A33A2B; }
+
+.admin-form .altyazi-etiketi {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.admin-form .altyazi-alani {
+  margin-top: 6px;
+  padding: 10px 12px;
+  font-size: 16px;
+}
+
+.foto-dugmeleri {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .yayinla-dugmesi {

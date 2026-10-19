@@ -7,3 +7,10 @@
 
 [functions]
   directory = "netlify/functions"
+
+# Fotoğraf dosya adları içeriğinden türediği için bir fotoğraf asla değişmez;
+# tarayıcılar bir yıl boyunca saklayabilir.
+[[headers]]
+  for = "/images/yazi/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

@@ -1,4 +1,4 @@
-# Ömer'in Defteri
+# Kiş İki Bayıt Bir
 
 A simple Turkish blog for Ömer's texts and stories, built with Eleventy (static
 site generator). Stories are added through our own small writing page at `/admin/`
@@ -54,6 +54,15 @@ The "Yayındaki yazılar" list on `/admin/` shows every published story.
   show up as ordinary characters.
 - Not supported yet: photos.
 
+## Photos
+
+In the writing page, "＋ Fotoğraf ekle" inserts a photo at the cursor in the text (the text is split there), so photos can go between paragraphs. Each photo card has a caption field, ↑/↓ buttons (move by one paragraph) and "Kaldır".
+
+- Photos are resized in the browser (max 1600px, JPEG), typically 300–600 KB. Limit: 30 photos per story.
+- Stored in `src/images/yazi/<hash>.jpg`; the story and its photos are saved in a single commit, so only one Netlify deploy runs.
+- Photos removed from a story, or left over from a deleted story, stay in the repo (harmless; delete them on GitHub if you want to free space).
+- Drafts saved in the browser keep the text only, not photos.
+
 ## Setup on Netlify (once)
 Site configuration > Environment variables > Add a variable. Add these three
 (and optionally mark them as secret). Then **redeploy** (Deploys > Trigger deploy)
@@ -88,7 +97,7 @@ writing page only work once deployed on Netlify.
 
 ## Comments (Cusdis)
 1. Create a free account at https://cusdis.com
-2. Create one "app" for this site (any name, e.g. "Ömer'in Defteri").
+2. Create one "app" for this site (any name, e.g. "Kiş İki Bayıt Bir").
 3. Copy the App ID it gives you.
 4. Open `src/_data/site.js` and replace `YOUR_CUSDIS_APP_ID_HERE` with it.
 5. New comments will show up in your Cusdis dashboard for moderation
