@@ -1,4 +1,4 @@
-# Kiş İki Bayıt Bir
+# Kiş İki Bayit Bir
 
 A simple Turkish blog for Ömer's texts and stories, built with Eleventy (static
 site generator). Stories are added through our own small writing page at `/admin/`
@@ -14,16 +14,18 @@ site generator). Stories are added through our own small writing page at `/admin
   published stories with Düzenle and Sil buttons).
 - `src/posts.json.11ty.js` — builds `/posts.json`, the public list of stories the
   admin page shows (title, date, address — nothing that isn't already on the homepage).
-- `netlify/functions/yayinla.js` — receives add / get / update / delete requests,
-  checks the password, and changes the files in GitHub.
-- `netlify/lib/yayinla-core.js` — the logic behind that function (password check,
-  lockout after 5 wrong tries, filename/date handling, plain text <-> HTML).
-- `netlify/functions/begen.js` — the like counter.
-- `netlify.toml` — tells Netlify how to build the site.
+- `api/yayinla.mjs` — receives add / get / update / delete / photo-upload requests (a
+  Vercel Function at `/api/yayinla`), checks the password, and changes the files in GitHub.
+- `lib/yayinla-core.mjs` — the logic behind that function (password check, lockout after
+  5 wrong tries, filename/date handling, plain text <-> HTML, photos).
+- `api/begen.mjs` — the like counter (`/api/begen`).
+- `lib/redis-depo.mjs` — tiny client for the Redis database (Upstash) that stores the like
+  counts and the wrong-password counter.
+- `vercel.json` — build settings and the long cache header for photos.
 
 ## How publishing works
 Ömer opens `/admin/`, writes a title and text, types the password, presses Yayınla.
-The function commits a new file to `src/posts/` in the GitHub repo. Netlify sees the
+The function commits a new file to `src/posts/` in the GitHub repo. Vercel sees the
 new commit, rebuilds the site, and the story is live about a minute later.
 
 - Blank line = new paragraph. A single line break stays a line break (good for poems).
@@ -52,21 +54,28 @@ The "Yayındaki yazılar" list on `/admin/` shows every published story.
 - Stories written by hand (like the three placeholder stories) can be edited too; when
   saved they are converted to the same plain-text format. Markdown symbols in them then
   show up as ordinary characters.
-- Not supported yet: photos.
 
 ## Photos
 
 In the writing page, "＋ Fotoğraf ekle" inserts a photo at the cursor in the text (the text is split there), so photos can go between paragraphs. Each photo card has a caption field, ↑/↓ buttons (move by one paragraph) and "Kaldır".
 
 - Photos are resized in the browser (max 1600px, JPEG), typically 300–600 KB. Limit: 30 photos per story.
-- Stored in `src/images/yazi/<hash>.jpg`; the story and its photos are saved in a single commit, so only one Netlify deploy runs.
+- Stored in `src/images/yazi/<hash>.jpg`; the story and its photos are saved in a single commit, so only one deploy runs (Vercel's free plan allows 100 deploys a day).
 - Photos removed from a story, or left over from a deleted story, stay in the repo (harmless; delete them on GitHub if you want to free space).
 - Drafts saved in the browser keep the text only, not photos.
 
-## Setup on Netlify (once)
-Site configuration > Environment variables > Add a variable. Add these three
-(and optionally mark them as secret). Then **redeploy** (Deploys > Trigger deploy)
-so the function can see them.
+## Setup on Vercel (once)
+1. Sign in at https://vercel.com with the GitHub account that owns the repository.
+2. **Add New > Project**, pick the `omerin-defteri` repository, leave the settings as they
+   are (they come from `vercel.json`) and press **Deploy**.
+3. Open the project > **Storage** > create a **Redis** database from the Marketplace
+   (Upstash, free plan) and **connect it to this project**. Vercel adds its address and
+   key to the project's environment variables by itself (`KV_REST_API_URL` and
+   `KV_REST_API_TOKEN`, or `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`;
+   both spellings work).
+4. Project > **Settings > Environment Variables**: add the variables below.
+5. **Deployments** > the three dots on the latest deployment > **Redeploy** so the functions
+   can see the new variables.
 
 | Name | Value |
 |------|-------|
@@ -75,6 +84,11 @@ so the function can see them.
 | `GITHUB_REPO` | `your-github-username/omerin-defteri` |
 | `GITHUB_BRANCH` | Optional. Only if your branch isn't called `main`. |
 
+### Custom domain
+Project > **Settings > Domains** > add the domain. Vercel shows the exact DNS records
+(an A record for the bare domain and a CNAME for `www`, or nameservers if you prefer to
+let Vercel manage DNS). HTTPS is automatic. Then change the site address in Cusdis.
+
 ### Creating the GitHub token
 GitHub > your profile picture > Settings > Developer settings > Personal access
 tokens > **Fine-grained tokens** > Generate new token.
@@ -82,7 +96,7 @@ tokens > **Fine-grained tokens** > Generate new token.
 - Permissions > Repository permissions > **Contents: Read and write**. Nothing else.
 - Expiration: choose the longest offered. When it expires, saving stories will fail
   with "Yazı kaydedilemedi" until you make a new token and replace `GITHUB_TOKEN`
-  in Netlify (then redeploy).
+  in Vercel (then redeploy).
 
 (GitHub occasionally renames menus; the idea is: a token limited to this repo, with
 Contents read/write.)
@@ -93,19 +107,23 @@ npm install
 npm start
 ```
 Opens a local server, usually at http://localhost:8080. The like counter and the
-writing page only work once deployed on Netlify.
+writing page only work once deployed on Vercel.
 
 ## Comments (Cusdis)
 1. Create a free account at https://cusdis.com
-2. Create one "app" for this site (any name, e.g. "Kiş İki Bayıt Bir").
+2. Create one "app" for this site (any name, e.g. "Kiş İki Bayit Bir").
 3. Copy the App ID it gives you.
 4. Open `src/_data/site.js` and replace `YOUR_CUSDIS_APP_ID_HERE` with it.
 5. New comments will show up in your Cusdis dashboard for moderation
    before appearing on the site (you can turn moderation off there too).
 
 ## Likes
-No extra account needed — likes are stored using Netlify's built-in
-Blobs storage, which is automatically available once the site is
-deployed on Netlify. Each post gets its own counter, one like per
-visitor (tracked in their browser, not perfectly bulletproof but fine
-for a family site). Nothing to configure.
+Likes are stored in the Redis database from step 3 above. Each post gets its own counter
+(increased atomically, so two likes at the same moment both count), one like per visitor
+(tracked in their browser, not perfectly bulletproof but fine for a family site).
+
+## Limits to know about
+- Vercel's free (Hobby) plan is for personal, non-commercial use: fine for a family
+  journal, not for ads or selling things.
+- A request to a function can be at most 4.5 MB. Photos are shrunk in the browser first
+  (usually 300–600 KB), so this is never reached in normal use.

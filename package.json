@@ -9,7 +9,7 @@
   "devDependencies": {
     "@11ty/eleventy": "^2.0.1"
   },
-  "dependencies": {
-    "@netlify/blobs": "^7.3.0"
+  "engines": {
+    "node": "22.x"
   }
 }
