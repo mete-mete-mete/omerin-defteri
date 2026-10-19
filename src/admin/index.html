@@ -3,9 +3,288 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
   <title>Yazı Ekle - Ömer'in Defteri</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+  <div class="wrap">
+    <header class="site-header">
+      <a href="/" class="site-title">Ömer'in Defteri</a>
+      <p class="site-tagline">Yazı ekle, düzenle, sil</p>
+    </header>
+
+    <form id="yazi-formu" class="admin-form" autocomplete="on">
+      <label for="kullanici" class="gizli-etiket">Kullanıcı</label>
+      <input id="kullanici" class="gizli-alan" type="text" name="username" value="omer" autocomplete="username" tabindex="-1" aria-hidden="true">
+
+      <label for="sifre">Şifre</label>
+      <input id="sifre" type="password" name="password" autocomplete="current-password" required>
+      <p class="ipucu">Yazı eklemek, düzenlemek ve silmek için bu şifre gerekir.</p>
+
+      <p id="kip" class="duzenleme-kipi" hidden></p>
+
+      <label for="baslik">Başlık</label>
+      <input id="baslik" type="text" maxlength="150" required>
+
+      <label for="metin">Yazı</label>
+      <textarea id="metin" rows="16" required></textarea>
+      <p class="ipucu">Paragrafları ayırmak için aralarında boş bir satır bırakın.</p>
+
+      <button type="submit" id="gonder" class="yayinla-dugmesi">Yayınla</button>
+      <button type="button" id="iptal" class="iptal-dugmesi" hidden>Vazgeç</button>
+      <p id="mesaj" class="form-mesaji" role="status" aria-live="polite"></p>
+    </form>
+
+    <section class="admin-bolum" aria-labelledby="liste-baslik">
+      <h2 id="liste-baslik">Yayındaki yazılar</h2>
+      <p id="liste-mesaji" class="ipucu">Yükleniyor...</p>
+      <ul id="liste" class="yazi-listesi"></ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      var form = document.getElementById("yazi-formu");
+      var sifre = document.getElementById("sifre");
+      var baslik = document.getElementById("baslik");
+      var metin = document.getElementById("metin");
+      var gonder = document.getElementById("gonder");
+      var iptal = document.getElementById("iptal");
+      var kip = document.getElementById("kip");
+      var mesaj = document.getElementById("mesaj");
+      var liste = document.getElementById("liste");
+      var listeMesaji = document.getElementById("liste-mesaji");
+      var TASLAK = "omerin-defteri-taslak";
+      var duzenlenen = null; // şu an düzenlenen yazının adı (yoksa null)
+
+      function mesajGoster(yazi, tur, adres) {
+        mesaj.textContent = yazi;
+        mesaj.className = "form-mesaji " + (tur || "");
+        if (adres) {
+          mesaj.appendChild(document.createTextNode(" "));
+          var a = document.createElement("a");
+          a.href = adres;
+          a.textContent = "Yazıya git";
+          mesaj.appendChild(a);
+        }
+      }
+
+      function sifreGerekli() {
+        if (sifre.value) return true;
+        mesajGoster("Önce şifreyi yazın.", "hata");
+        sifre.focus();
+        return false;
+      }
+
+      // Sunucuya istek gönder. Her zaman { ok, veri } döner; bağlantı kopsa bile.
+      function istek(govde) {
+        govde.sifre = sifre.value;
+        return fetch("/api/yayinla", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(govde)
+        })
+          .then(function (yanit) {
+            return yanit.json().catch(function () { return {}; }).then(function (veri) {
+              return { ok: yanit.ok, veri: veri };
+            });
+          })
+          .catch(function () {
+            return { ok: false, veri: { hata: "Bağlantı kurulamadı. İnternetinizi kontrol edip tekrar deneyin. Yazınız silinmedi." } };
+          });
+      }
+
+      // --- Yeni yazı taslağı (yarım kalan yazı kaybolmasın) ---
+      function taslakOku() {
+        try { return JSON.parse(localStorage.getItem(TASLAK) || "null"); } catch (e) { return null; }
+      }
+      function taslakKaydet() {
+        if (duzenlenen) return;
+        try { localStorage.setItem(TASLAK, JSON.stringify({ baslik: baslik.value, metin: metin.value })); } catch (e) { /* önemli değil */ }
+      }
+      function taslakSil() {
+        try { localStorage.removeItem(TASLAK); } catch (e) { /* önemli değil */ }
+      }
+      function taslagiAlanlaraYaz() {
+        var t = taslakOku();
+        baslik.value = t && t.baslik ? t.baslik : "";
+        metin.value = t && t.metin ? t.metin : "";
+      }
+      baslik.addEventListener("input", taslakKaydet);
+      metin.addEventListener("input", taslakKaydet);
+      taslagiAlanlaraYaz();
+
+      // --- Düzenleme kipi ---
+      function duzenlemeyiBitir() {
+        duzenlenen = null;
+        kip.hidden = true;
+        iptal.hidden = true;
+        gonder.textContent = "Yayınla";
+        taslagiAlanlaraYaz();
+      }
+
+      function duzenlemeyiBaslat(ad) {
+        if (!sifreGerekli()) return;
+        mesajGoster("Yazı açılıyor...", "bekle");
+        istek({ islem: "getir", ad: ad }).then(function (s) {
+          if (!s.ok) {
+            mesajGoster(s.veri.hata || "Yazı açılamadı. Biraz sonra tekrar deneyin.", "hata");
+            return;
+          }
+          duzenlenen = ad;
+          baslik.value = s.veri.baslik;
+          metin.value = s.veri.metin;
+          kip.textContent = "Şu an düzenliyorsunuz: " + s.veri.baslik + ". Yeni yazınız silinmedi, vazgeçince geri gelir.";
+          kip.hidden = false;
+          iptal.hidden = false;
+          gonder.textContent = "Değişiklikleri kaydet";
+          mesajGoster("", "");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          metin.focus();
+        });
+      }
+
+      iptal.addEventListener("click", function () {
+        duzenlemeyiBitir();
+        mesajGoster("", "");
+      });
+
+      // --- Yazı listesi ---
+      function adOlustur(adres) {
+        return String(adres).replace(/^\/posts\//, "").replace(/\/$/, "");
+      }
+
+      function listeBosMu() {
+        listeMesaji.hidden = liste.children.length > 0;
+        if (!listeMesaji.hidden) listeMesaji.textContent = "Henüz yayınlanmış yazı yok.";
+      }
+
+      function satirYap(yazi, yeni) {
+        var ad = adOlustur(yazi.adres);
+        var li = document.createElement("li");
+        li.className = "yazi-satiri";
+        li.setAttribute("data-ad", ad);
+
+        var bilgi = document.createElement("div");
+        bilgi.className = "yazi-bilgi";
+        var tarih = document.createElement("span");
+        tarih.className = "yazi-tarihi";
+        tarih.textContent = yazi.tarih || "";
+        var baglanti = document.createElement("a");
+        baglanti.className = "yazi-adi";
+        baglanti.href = yazi.adres;
+        baglanti.target = "_blank";
+        baglanti.rel = "noopener";
+        baglanti.textContent = yazi.baslik;
+        bilgi.appendChild(tarih);
+        bilgi.appendChild(baglanti);
+        if (yeni) {
+          var etiket = document.createElement("span");
+          etiket.className = "yeni-etiket";
+          etiket.textContent = "yayına alınıyor";
+          bilgi.appendChild(etiket);
+        }
+
+        var dugmeler = document.createElement("div");
+        dugmeler.className = "yazi-dugmeleri";
+        var duzenle = document.createElement("button");
+        duzenle.type = "button";
+        duzenle.className = "ikincil-dugme";
+        duzenle.textContent = "Düzenle";
+        duzenle.setAttribute("aria-label", yazi.baslik + " yazısını düzenle");
+        duzenle.addEventListener("click", function () { duzenlemeyiBaslat(ad); });
+        var sil = document.createElement("button");
+        sil.type = "button";
+        sil.className = "tehlike-dugme";
+        sil.textContent = "Sil";
+        sil.setAttribute("aria-label", yazi.baslik + " yazısını sil");
+        sil.addEventListener("click", function () { yaziyiSil(ad, baglanti.textContent, li, sil, duzenle); });
+        dugmeler.appendChild(duzenle);
+        dugmeler.appendChild(sil);
+
+        li.appendChild(bilgi);
+        li.appendChild(dugmeler);
+        return li;
+      }
+
+      function yaziyiSil(ad, baslikYazisi, li, silDugmesi, duzenleDugmesi) {
+        if (!sifreGerekli()) return;
+        var emin = window.confirm("“" + baslikYazisi + "” yazısı siteden kaldırılsın mı?");
+        if (!emin) return;
+        silDugmesi.disabled = true;
+        duzenleDugmesi.disabled = true;
+        mesajGoster("Siliniyor...", "bekle");
+        istek({ islem: "sil", ad: ad }).then(function (s) {
+          if (!s.ok) {
+            silDugmesi.disabled = false;
+            duzenleDugmesi.disabled = false;
+            mesajGoster(s.veri.hata || "Yazı silinemedi. Biraz sonra tekrar deneyin.", "hata");
+            return;
+          }
+          li.remove();
+          if (duzenlenen === ad) duzenlemeyiBitir();
+          listeBosMu();
+          mesajGoster("Yazı silindi. Sitede kaybolması yaklaşık bir dakika sürer.", "basarili");
+        });
+      }
+
+      function listedeBaslikGuncelle(ad, yeniBaslik) {
+        var satirlar = liste.querySelectorAll(".yazi-satiri");
+        for (var i = 0; i < satirlar.length; i++) {
+          if (satirlar[i].getAttribute("data-ad") === ad) {
+            satirlar[i].querySelector(".yazi-adi").textContent = yeniBaslik;
+          }
+        }
+      }
+
+      fetch("/posts.json?t=" + Date.now(), { cache: "no-store" })
+        .then(function (yanit) { if (!yanit.ok) throw new Error("liste"); return yanit.json(); })
+        .then(function (yazilar) {
+          for (var i = 0; i < yazilar.length; i++) liste.appendChild(satirYap(yazilar[i], false));
+          listeBosMu();
+        })
+        .catch(function () {
+          listeMesaji.hidden = false;
+          listeMesaji.textContent = "Yazı listesi şu an yüklenemedi. Sayfayı yenileyin.";
+        });
+
+      // --- Gönder (yeni yazı veya değişiklik) ---
+      form.addEventListener("submit", function (olay) {
+        olay.preventDefault();
+        var duzenleme = duzenlenen;
+        var baslikDegeri = baslik.value;
+        gonder.disabled = true;
+        mesajGoster("Gönderiliyor...", "bekle");
+
+        var govde = duzenleme
+          ? { islem: "guncelle", ad: duzenleme, baslik: baslikDegeri, metin: metin.value }
+          : { islem: "ekle", baslik: baslikDegeri, metin: metin.value };
+
+        istek(govde).then(function (s) {
+          gonder.disabled = false;
+          if (!s.ok) {
+            mesajGoster(s.veri.hata || "Bir sorun oluştu. Biraz sonra tekrar deneyin.", "hata");
+            return;
+          }
+          if (duzenleme) {
+            listedeBaslikGuncelle(duzenleme, s.veri.baslik || baslikDegeri);
+            duzenlemeyiBitir();
+            mesajGoster("Değişiklikler kaydedildi. Sitede görünmesi yaklaşık bir dakika sürer.", "basarili", s.veri.adres);
+          } else {
+            baslik.value = "";
+            metin.value = "";
+            taslakSil();
+            liste.insertBefore(satirYap({ baslik: baslikDegeri.replace(/\s+/g, " ").trim(), tarih: s.veri.tarih, adres: s.veri.adres }, true), liste.firstChild);
+            listeBosMu();
+            mesajGoster("Yazı kaydedildi. Sitede görünmesi yaklaşık bir dakika sürer.", "basarili", s.veri.adres);
+          }
+        });
+      });
+    })();
+  </script>
 </body>
 </html>
