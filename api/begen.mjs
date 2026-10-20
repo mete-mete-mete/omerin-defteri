@@ -15,7 +15,7 @@ export default {
       return jsonYanit(405, { error: "Desteklenmeyen işlem" });
     }
     if (!redisAyarlari(process.env)) {
-      console.error("Redis bağlı değil: Vercel > Storage bölümünden Upstash Redis'i bu projeye bağlayın.");
+      console.error("Redis bağlı değil: Vercel > Storage bölümünden bir Redis veritabanını bu projeye bağlayın.");
       return jsonYanit(500, { error: "Beğeni sayacı kurulmamış" });
     }
 
