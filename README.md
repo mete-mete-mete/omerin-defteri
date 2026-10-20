@@ -19,7 +19,7 @@ site generator). Stories are added through our own small writing page at `/admin
 - `lib/yayinla-core.mjs` — the logic behind that function (password check, lockout after
   5 wrong tries, filename/date handling, plain text <-> HTML, photos).
 - `api/begen.mjs` — the like counter (`/api/begen`).
-- `lib/redis-depo.mjs` — tiny client for the Redis database (Upstash) that stores the like
+- `lib/redis-depo.mjs` — tiny client for the Redis database that stores the like
   counts and the wrong-password counter.
 - `vercel.json` — build settings and the long cache header for photos.
 
@@ -68,11 +68,12 @@ In the writing page, "＋ Fotoğraf ekle" inserts a photo at the cursor in the t
 1. Sign in at https://vercel.com with the GitHub account that owns the repository.
 2. **Add New > Project**, pick the `omerin-defteri` repository, leave the settings as they
    are (they come from `vercel.json`) and press **Deploy**.
-3. Open the project > **Storage** > create a **Redis** database from the Marketplace
-   (Upstash, free plan) and **connect it to this project**. Vercel adds its address and
-   key to the project's environment variables by itself (`KV_REST_API_URL` and
-   `KV_REST_API_TOKEN`, or `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`;
-   both spellings work).
+3. Open **Integrations > Browse Marketplace** and add a **Redis** database (the free plan is
+   enough; either "Redis" or "Upstash" works), then **connect it to this project**
+   (Projects tab > Connect Project). Vercel adds the connection variable(s) to the project by
+   itself: `REDIS_URL` for Redis Cloud, or `KV_REST_API_URL` and `KV_REST_API_TOKEN` (or
+   `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`) for Upstash. A custom prefix
+   in front of the name is fine.
 4. Project > **Settings > Environment Variables**: add the variables below.
 5. **Deployments** > the three dots on the latest deployment > **Redeploy** so the functions
    can see the new variables.
